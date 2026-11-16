@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+
+    <!-- Палитра под иконку: почти чёрный + приглушённый синий -->
+    <Color x:Key="PbBg">#0A0C0F</Color>
+    <Color x:Key="PbSurface">#12161A</Color>
+    <Color x:Key="PbSurfaceAlt">#1A2027</Color>
+    <Color x:Key="PbStroke">#232B33</Color>
+    <Color x:Key="PbAccent">#9FC9E0</Color>
+    <Color x:Key="PbAccentSoft">#16242C</Color>
+    <Color x:Key="PbAccentDark">#0A0C0F</Color>
+    <Color x:Key="PbOk">#5FB3D4</Color>
+    <Color x:Key="PbOkSoft">#132630</Color>
+    <Color x:Key="PbWarn">#C9A65F</Color>
+    <Color x:Key="PbWarnSoft">#24200F</Color>
+    <Color x:Key="PbDanger">#C96B6B</Color>
+    <Color x:Key="PbDangerSoft">#241416</Color>
+    <Color x:Key="PbText">#E4ECF2</Color>
+    <Color x:Key="PbMuted">#7E8B96</Color>
+
+    <!-- Типографика -->
+    <Style x:Key="PbTitle" TargetType="Label">
+        <Setter Property="FontSize" Value="24" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="TextColor" Value="{StaticResource PbText}" />
+    </Style>
+
+    <Style x:Key="PbSubtitle" TargetType="Label">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="TextColor" Value="{StaticResource PbMuted}" />
+    </Style>
+
+    <Style x:Key="PbCaption" TargetType="Label">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="CharacterSpacing" Value="1.4" />
+        <Setter Property="TextColor" Value="{StaticResource PbMuted}" />
+    </Style>
+
+    <Style x:Key="PbValue" TargetType="Label">
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="TextColor" Value="{StaticResource PbText}" />
+    </Style>
+
+    <Style x:Key="PbAccentValue" TargetType="Label">
+        <Setter Property="FontSize" Value="12" />
+        <Setter Property="TextColor" Value="{StaticResource PbAccent}" />
+    </Style>
+
+    <Style x:Key="PbStatusValue" TargetType="Label">
+        <Setter Property="FontSize" Value="17" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="TextColor" Value="{StaticResource PbText}" />
+    </Style>
+
+    <!-- Карточки: минимальные скругления -->
+    <Style x:Key="PbCard" TargetType="Border">
+        <Setter Property="BackgroundColor" Value="{StaticResource PbSurface}" />
+        <Setter Property="Stroke" Value="{StaticResource PbStroke}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="Padding" Value="16" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 8" />
+    </Style>
+
+    <Style x:Key="PbCardFlat" TargetType="Border">
+        <Setter Property="BackgroundColor" Value="{StaticResource PbSurfaceAlt}" />
+        <Setter Property="Stroke" Value="{StaticResource PbStroke}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="Padding" Value="14" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 8" />
+    </Style>
+
+    <Style x:Key="PbChip" TargetType="Border">
+        <Setter Property="BackgroundColor" Value="{StaticResource PbSurfaceAlt}" />
+        <Setter Property="Stroke" Value="{StaticResource PbStroke}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="Padding" Value="10,4" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 6" />
+    </Style>
+
+    <Style x:Key="PbDot" TargetType="Border">
+        <Setter Property="WidthRequest" Value="10" />
+        <Setter Property="HeightRequest" Value="10" />
+        <Setter Property="StrokeThickness" Value="0" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 5" />
+    </Style>
+
+    <Style x:Key="PbSegment" TargetType="Border">
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="Stroke" Value="{StaticResource PbStroke}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 6" />
+        <Setter Property="Padding" Value="12,10" />
+        <Setter Property="HeightRequest" Value="46" />
+        <Setter Property="VerticalOptions" Value="Center" />
+    </Style>
+
+    <Style x:Key="PbSegmentText" TargetType="Label">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="TextColor" Value="{StaticResource PbMuted}" />
+        <Setter Property="HorizontalTextAlignment" Value="Center" />
+        <Setter Property="VerticalTextAlignment" Value="Center" />
+        <Setter Property="LineBreakMode" Value="TailTruncation" />
+    </Style>
+
+    <Style x:Key="PbStatValue" TargetType="Label">
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="TextColor" Value="{StaticResource PbText}" />
+        <Setter Property="LineBreakMode" Value="TailTruncation" />
+    </Style>
+
+    <Style x:Key="PbStatLabel" TargetType="Label">
+        <Setter Property="FontSize" Value="10" />
+        <Setter Property="CharacterSpacing" Value="1.2" />
+        <Setter Property="TextColor" Value="{StaticResource PbMuted}" />
+    </Style>
+
+    <Style x:Key="PbCode" TargetType="Label">
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="FontFamily" Value="Courier New" />
+        <Setter Property="TextColor" Value="{StaticResource PbAccent}" />
+        <Setter Property="LineBreakMode" Value="MiddleTruncation" />
+    </Style>
+
+    <Style x:Key="PbLog" TargetType="Label">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="FontFamily" Value="Courier New" />
+        <Setter Property="TextColor" Value="{StaticResource PbMuted}" />
+        <Setter Property="LineBreakMode" Value="WordWrap" />
+    </Style>
+
+    <!-- Кнопки: прямые углы с лёгким скруглением -->
+    <Style x:Key="PbPrimaryButton" TargetType="Button">
+        <Setter Property="BackgroundColor" Value="{StaticResource PbAccent}" />
+        <Setter Property="TextColor" Value="{StaticResource PbAccentDark}" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="HeightRequest" Value="50" />
+    </Style>
+
+    <Style x:Key="PbDangerButton" TargetType="Button">
+        <Setter Property="BackgroundColor" Value="{StaticResource PbDangerSoft}" />
+        <Setter Property="TextColor" Value="{StaticResource PbDanger}" />
+        <Setter Property="BorderColor" Value="{StaticResource PbDanger}" />
+        <Setter Property="BorderWidth" Value="1" />
+        <Setter Property="FontAttributes" Value="Bold" />
+        <Setter Property="FontSize" Value="16" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="HeightRequest" Value="50" />
+    </Style>
+
+    <Style x:Key="PbGhostButton" TargetType="Button">
+        <Setter Property="BackgroundColor" Value="{StaticResource PbSurfaceAlt}" />
+        <Setter Property="TextColor" Value="{StaticResource PbText}" />
+        <Setter Property="BorderColor" Value="{StaticResource PbStroke}" />
+        <Setter Property="BorderWidth" Value="1" />
+        <Setter Property="FontSize" Value="14" />
+        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="HeightRequest" Value="42" />
+    </Style>
+
+    <Style x:Key="PbField" TargetType="Border">
+        <Setter Property="BackgroundColor" Value="{StaticResource PbSurfaceAlt}" />
+        <Setter Property="Stroke" Value="{StaticResource PbStroke}" />
+        <Setter Property="StrokeThickness" Value="1" />
+        <Setter Property="StrokeShape" Value="RoundRectangle 6" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="HeightRequest" Value="42" />
+        <Setter Property="VerticalOptions" Value="Center" />
+    </Style>
+
+    <Style x:Key="PbEntryInner" TargetType="Entry">
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="TextColor" Value="{StaticResource PbText}" />
+        <Setter Property="PlaceholderColor" Value="{StaticResource PbMuted}" />
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="HeightRequest" Value="40" />
+        <Setter Property="Margin" Value="10,0" />
+        <Setter Property="VerticalOptions" Value="Center" />
+    </Style>
+
+    <Style x:Key="PbEntry" TargetType="Entry">
+        <Setter Property="BackgroundColor" Value="Transparent" />
+        <Setter Property="TextColor" Value="{StaticResource PbText}" />
+        <Setter Property="PlaceholderColor" Value="{StaticResource PbMuted}" />
+        <Setter Property="FontSize" Value="15" />
+        <Setter Property="HeightRequest" Value="40" />
+    </Style>
+
+    <Style x:Key="PbDivider" TargetType="BoxView">
+        <Setter Property="HeightRequest" Value="1" />
+        <Setter Property="Color" Value="{StaticResource PbStroke}" />
+    </Style>
+
+</ResourceDictionary>

@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:ProxyBridge.Android.ViewModels"
+             x:Class="ProxyBridge.Android.MainPage"
+             x:DataType="vm:ProxyViewModel"
+             BackgroundColor="{StaticResource PbBg}">
+
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- Шапка -->
+        <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14" Padding="20,18,20,6">
+            <Border WidthRequest="44" HeightRequest="44" Padding="8"
+                    BackgroundColor="{StaticResource PbSurfaceAlt}"
+                    Stroke="{StaticResource PbStroke}" StrokeThickness="1"
+                    StrokeShape="RoundRectangle 8">
+                <Image Source="logo.png" Aspect="AspectFit" />
+            </Border>
+            <VerticalStackLayout Grid.Column="1" Spacing="1" VerticalOptions="Center">
+                <Label Text="TetherLink" Style="{StaticResource PbTitle}" FontSize="21" />
+                <Label Text="прокси в точке доступа" Style="{StaticResource PbSubtitle}" />
+            </VerticalStackLayout>
+            <Button Grid.Column="2" Text="⟳" FontSize="19"
+                    BackgroundColor="{StaticResource PbSurfaceAlt}"
+                    TextColor="{StaticResource PbText}"
+                    BorderColor="{StaticResource PbStroke}" BorderWidth="1"
+                    CornerRadius="8" HeightRequest="42" WidthRequest="42"
+                    Padding="0" Command="{Binding RefreshCommand}" />
+        </Grid>
+
+        <ScrollView Grid.Row="1">
+            <VerticalStackLayout Padding="20,32,20,26" Spacing="16">
+
+                <!-- Кнопка питания -->
+                <VerticalStackLayout Spacing="4">
+                    <Border WidthRequest="180" HeightRequest="180" Padding="0"
+                            StrokeThickness="2" Stroke="{Binding PowerStroke}"
+                            BackgroundColor="{StaticResource PbSurface}"
+                            StrokeShape="RoundRectangle 90" HorizontalOptions="Center">
+                        <Border.Shadow>
+                            <Shadow Brush="#3ED598" Offset="0,0" Radius="24"
+                                    Opacity="{Binding PowerGlowOpacity}" />
+                        </Border.Shadow>
+                        <Border.GestureRecognizers>
+                            <TapGestureRecognizer Command="{Binding ToggleCommand}" />
+                        </Border.GestureRecognizers>
+                        <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="2">
+                            <Label Text="{Binding PowerText}" FontSize="17" FontAttributes="Bold"
+                                   TextColor="{Binding PowerTextColor}" HorizontalTextAlignment="Center" />
+                            <Label Text="{Binding PowerSubText}" FontSize="11" TextColor="{StaticResource PbMuted}"
+                                   HorizontalTextAlignment="Center" Margin="8,0" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <HorizontalStackLayout Spacing="8" HorizontalOptions="Center" Margin="0,10,0,0">
+                        <Border Style="{StaticResource PbChip}">
+                            <Label Text="точка доступа" Style="{StaticResource PbAccentValue}" />
+                        </Border>
+                        <Border Style="{StaticResource PbChip}">
+                            <Label Text="{Binding ClientAddress}" Style="{StaticResource PbAccentValue}" />
+                        </Border>
+                    </HorizontalStackLayout>
+
+                    <Label Text="{Binding DetailText}" Style="{StaticResource PbSubtitle}"
+                           HorizontalTextAlignment="Center" Margin="12,10,12,0" />
+                </VerticalStackLayout>
+
+                <!-- Для ноутбука -->
+                <Border Style="{StaticResource PbCard}">
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="ДЛЯ НОУТБУКА" Style="{StaticResource PbCaption}" />
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                            <Label Text="{Binding ClientAddress}" Style="{StaticResource PbCode}"
+                                   LineBreakMode="MiddleTruncation" VerticalOptions="Center" />
+                            <Button Grid.Column="1" Text="Копировать" Command="{Binding CopyAddressCommand}"
+                                    Style="{StaticResource PbGhostButton}" FontSize="12" HeightRequest="36" />
+                        </Grid>
+                        <Label Text="Приложение на компьютере находит этот адрес само — по шлюзу Wi-Fi."
+                               Style="{StaticResource PbSubtitle}" FontSize="12" />
+                        <BoxView Style="{StaticResource PbDivider}" />
+                        <Label Text="УСТАНОВКА НА НОУТБУКЕ" Style="{StaticResource PbCaption}" />
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                            <Label Text="artifacts\\win-release-new\\ProxyBridge.Windows.exe" Style="{StaticResource PbCode}"
+                                   LineBreakMode="MiddleTruncation" VerticalOptions="Center" />
+                            <Button Grid.Column="1" Text="Копировать" Command="{Binding CopyInstallCommand}"
+                                    Style="{StaticResource PbGhostButton}" FontSize="12" HeightRequest="36" />
+                        </Grid>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Настройки -->
+                <Border Style="{StaticResource PbCard}">
+                    <VerticalStackLayout Spacing="14">
+                        <Label Text="НАСТРОЙКИ" Style="{StaticResource PbCaption}" />
+
+                        <Grid ColumnDefinitions="*,132" ColumnSpacing="12">
+                            <VerticalStackLayout Spacing="2" VerticalOptions="Center">
+                                <Label Text="Порт" Style="{StaticResource PbValue}" />
+                                <Label Text="HTTP + SOCKS5, тот же на ноутбуке" Style="{StaticResource PbSubtitle}" />
+                            </VerticalStackLayout>
+                            <Border Grid.Column="1" Style="{StaticResource PbField}">
+                                <Entry Text="{Binding PortText}" Keyboard="Numeric"
+                                       HorizontalTextAlignment="Center" Style="{StaticResource PbEntryInner}" />
+                            </Border>
+                        </Grid>
+
+                        <BoxView Style="{StaticResource PbDivider}" />
+
+                        <VerticalStackLayout Spacing="6">
+                            <Label Text="Прокси работает только в точке доступа: включите её, затем нажмите кольцо."
+                                   Style="{StaticResource PbSubtitle}" FontSize="12" />
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- Журнал -->
+                <Border Style="{StaticResource PbCard}">
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="ЖУРНАЛ" Style="{StaticResource PbCaption}" />
+                        <Label Text="{Binding LogText}" Style="{StaticResource PbLog}" />
+                    </VerticalStackLayout>
+                </Border>
+
+            </VerticalStackLayout>
+        </ScrollView>
+    </Grid>
+
+</ContentPage>
