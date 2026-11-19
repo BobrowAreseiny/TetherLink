@@ -6,6 +6,9 @@ on:
       - 'v*'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-android:
     runs-on: ubuntu-latest
@@ -17,6 +20,9 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
+      - name: Install MAUI Android workload
+        run: dotnet workload install maui-android
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -26,10 +32,11 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Install Android platform 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
       - name: Build Android APK
-        run: |
-          dotnet build ProxyBridge.Android -c Release
-          dotnet publish ProxyBridge.Android -c Release -f net10.0-android
+        run: dotnet build ProxyBridge.Android -c Release -f net10.0-android
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
@@ -46,6 +53,9 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+
+      - name: Install MAUI Windows workload
+        run: dotnet workload install maui-windows
 
       - name: Build Windows
         run: |
