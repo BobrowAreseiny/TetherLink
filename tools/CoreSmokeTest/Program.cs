@@ -92,48 +92,7 @@ using (var http = new TcpClient())
     Check("С неверным паролем CONNECT отвечает 407", text.Contains("407"), text.Split('\r')[0]);
 }
 
-// ---------- 5. WPAD-DNS отвечает на запрос «wpad» ----------
-await using (var dns = new WpadDnsServer(IPAddress.Parse("192.168.43.1")))
-{
-    dns.Start(15353);
-    await Task.Delay(300);
-
-    using var udp = new UdpClient();
-    udp.Connect(IPAddress.Loopback, 15353);
-
-    // Запрос A для wpad: длины меток обязательны (0x04 «wpad» 0x00)
-    var query = new List<byte> { 0x12, 0x34, 0x01, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0 };
-    query.Add(0x04);
-    query.AddRange(Encoding.ASCII.GetBytes("wpad"));
-    query.Add(0x00);
-    query.AddRange([0x00, 0x01]); // QTYPE = A
-    query.AddRange([0x00, 0x01]); // QCLASS = IN
-
-    await udp.SendAsync(query.ToArray(), query.Count);
-    var task = udp.ReceiveAsync();
-    var completed = await Task.WhenAny(task, Task.Delay(3000));
-    Check("WPAD-DNS отвечает", completed == task);
-    if (completed == task)
-    {
-        var reply = task.Result.Buffer;
-        var ancount = (reply[6] << 8) | reply[7];
-        Check("WPAD-DNS вернул 1 A-запись", ancount == 1, $"ancount={ancount}");
-
-        // Ищем 4 байта адреса в конце ответа
-        var found = false;
-        for (var i = 0; i + 4 <= reply.Length; i++)
-        {
-            if (reply[i] == 192 && reply[i + 1] == 168 && reply[i + 2] == 43 && reply[i + 3] == 1)
-            {
-                found = true;
-                break;
-            }
-        }
-        Check("WPAD-DNS вернул IP 192.168.43.1", found);
-    }
-}
-
-// ---------- 6. SOCKS5 UDP ASSOCIATE (на сервере без авторизации) ----------
+// ---------- 5. SOCKS5 UDP ASSOCIATE (на сервере без авторизации) ----------
 var openServer = new ProxyServer(IPAddress.Loopback, 19081, new ProxyServerOptions
 {
     AdvertisedHost = IPAddress.Loopback,

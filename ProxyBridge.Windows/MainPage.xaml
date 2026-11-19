@@ -13,8 +13,7 @@
         <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14" Padding="26,18,26,6">
             <Border WidthRequest="44" HeightRequest="44" Padding="8"
                     BackgroundColor="{StaticResource PbSurfaceAlt}"
-                    Stroke="{StaticResource PbStroke}" StrokeThickness="1"
-                    StrokeShape="RoundRectangle 8">
+                    Stroke="{StaticResource PbStroke}" StrokeThickness="1">
                 <Image Source="logo.png" Aspect="AspectFit" />
             </Border>
             <VerticalStackLayout Grid.Column="1" Spacing="1" VerticalOptions="Center">
@@ -25,36 +24,47 @@
                     BackgroundColor="{StaticResource PbSurfaceAlt}"
                     TextColor="{StaticResource PbText}"
                     BorderColor="{StaticResource PbStroke}" BorderWidth="1"
-                    CornerRadius="8" HeightRequest="42" WidthRequest="42"
+                    CornerRadius="0" HeightRequest="42" WidthRequest="42"
                     Padding="0" Command="{Binding RefreshCommand}" />
         </Grid>
 
         <ScrollView Grid.Row="1">
-            <VerticalStackLayout Padding="26,10,26,26" Spacing="18"
+            <VerticalStackLayout Padding="26,14,26,26" Spacing="18"
                                  MaximumWidthRequest="620" HorizontalOptions="Center">
 
                 <!-- Кнопка питания -->
                 <VerticalStackLayout Spacing="4">
-                    <Border WidthRequest="190" HeightRequest="190" Padding="0"
-                            StrokeThickness="2" Stroke="{Binding PowerStroke}"
-                            BackgroundColor="{StaticResource PbSurface}"
-                            StrokeShape="RoundRectangle 95" HorizontalOptions="Center">
-                        <Border.Shadow>
-                            <Shadow Brush="#3ED598" Offset="0,0" Radius="26"
-                                    Opacity="{Binding PowerGlowOpacity}" />
-                        </Border.Shadow>
-                        <Border.GestureRecognizers>
-                            <TapGestureRecognizer Command="{Binding ToggleCommand}" />
-                        </Border.GestureRecognizers>
-                        <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="2">
-                            <Label Text="{Binding PowerText}" FontSize="18" FontAttributes="Bold"
-                                   TextColor="{Binding PowerTextColor}" HorizontalTextAlignment="Center" />
-                            <Label Text="{Binding PowerSubText}" FontSize="11" TextColor="{StaticResource PbMuted}"
-                                   HorizontalTextAlignment="Center" Margin="8,0" />
-                        </VerticalStackLayout>
-                    </Border>
+                    <Grid WidthRequest="270" HeightRequest="270" HorizontalOptions="Center">
+                        <!-- Свечение: радиальный градиент внутри макета, чтобы его
+                             не обрезала верхняя кромка ScrollView. -->
+                        <Border WidthRequest="270" HeightRequest="270" StrokeThickness="0"
+                                Opacity="{Binding PowerGlowOpacity}" InputTransparent="True">
+                            <Border.Background>
+                                <RadialGradientBrush Center="0.5,0.5" Radius="0.5">
+                                    <GradientStop Color="#003ED598" Offset="0.60" />
+                                    <GradientStop Color="#553ED598" Offset="0.79" />
+                                    <GradientStop Color="#003ED598" Offset="1.0" />
+                                </RadialGradientBrush>
+                            </Border.Background>
+                        </Border>
 
-                    <HorizontalStackLayout Spacing="8" HorizontalOptions="Center" Margin="0,10,0,0">
+                        <Border WidthRequest="190" HeightRequest="190" Padding="0"
+                                StrokeThickness="2" Stroke="{Binding PowerStroke}"
+                                BackgroundColor="{StaticResource PbSurface}"
+                                StrokeShape="RoundRectangle 95" HorizontalOptions="Center" VerticalOptions="Center">
+                            <Border.GestureRecognizers>
+                                <TapGestureRecognizer Command="{Binding ToggleCommand}" />
+                            </Border.GestureRecognizers>
+                            <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="2">
+                                <Label Text="{Binding PowerText}" FontSize="18" FontAttributes="Bold"
+                                       TextColor="{Binding PowerTextColor}" HorizontalTextAlignment="Center" />
+                                <Label Text="{Binding PowerSubText}" FontSize="11" TextColor="{StaticResource PbMuted}"
+                                       HorizontalTextAlignment="Center" Margin="8,0" />
+                            </VerticalStackLayout>
+                        </Border>
+                    </Grid>
+
+                    <HorizontalStackLayout Spacing="8" HorizontalOptions="Center" Margin="0,2,0,0">
                         <Border Style="{StaticResource PbChip}">
                             <Label Text="{Binding ModeName}" Style="{StaticResource PbAccentValue}" />
                         </Border>
@@ -103,27 +113,20 @@
 
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                             <VerticalStackLayout Spacing="2" VerticalOptions="Center">
+                                <Label Text="Закрывать сессию OpenCode" Style="{StaticResource PbValue}" />
+                                <Label Text="при смене прокси — новый запуск подхватит настройки" Style="{StaticResource PbSubtitle}" />
+                            </VerticalStackLayout>
+                            <controls:PbToggle Grid.Column="1" IsToggled="{Binding CloseOpencodeSession}" />
+                        </Grid>
+
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                            <VerticalStackLayout Spacing="2" VerticalOptions="Center">
                                 <Label Text="Переподключаться сам" Style="{StaticResource PbValue}" />
                                 <Label Text="если кабель/USB уснул — связь вернётся сама" Style="{StaticResource PbSubtitle}" />
                             </VerticalStackLayout>
                             <controls:PbToggle Grid.Column="1" IsToggled="{Binding AutoReconnect}" />
                         </Grid>
 
-                    </VerticalStackLayout>
-                </Border>
-
-                <!-- Строка для установки -->
-                <Border Style="{StaticResource PbCard}">
-                    <VerticalStackLayout Spacing="10">
-                        <Label Text="УСТАНОВКА НА ДРУГОЙ НОУТБУК" Style="{StaticResource PbCaption}" />
-                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                            <Label Text="artifacts\\win-release-new\\ProxyBridge.Windows.exe" Style="{StaticResource PbCode}"
-                                   LineBreakMode="MiddleTruncation" VerticalOptions="Center" />
-                            <Button Grid.Column="1" Text="Копировать" Command="{Binding CopyInstallCommand}"
-                                    Style="{StaticResource PbGhostButton}" FontSize="12" HeightRequest="36" />
-                        </Grid>
-                        <Label Text="Скопируйте папку целиком на флешку или по сети — exe без неё не запустится."
-                               Style="{StaticResource PbSubtitle}" FontSize="12" />
                     </VerticalStackLayout>
                 </Border>
 
@@ -143,14 +146,20 @@
                             </Border>
                         </Grid>
 
-                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
-                            <Label Text="{Binding CheckResultText}" Style="{StaticResource PbSubtitle}"
-                                   VerticalOptions="Center" LineBreakMode="TailTruncation" />
+                        <Label Text="{Binding CheckResultText}" Style="{StaticResource PbSubtitle}"
+                               LineBreakMode="TailTruncation" />
+
+                        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                            <Button Grid.Column="0" Text="Проверить" Command="{Binding CheckPhoneCommand}"
+                                    Style="{StaticResource PbGhostButton}" FontSize="13" HeightRequest="40" Padding="0" />
                             <Button Grid.Column="1" Text="Сети Wi-Fi" Command="{Binding OpenWifiSettingsCommand}"
-                                    Style="{StaticResource PbGhostButton}" FontSize="13" HeightRequest="40" />
-                            <Button Grid.Column="2" Text="Проверить" Command="{Binding CheckPhoneCommand}"
-                                    Style="{StaticResource PbGhostButton}" FontSize="13" HeightRequest="40" />
+                                    Style="{StaticResource PbGhostButton}" FontSize="13" HeightRequest="40" Padding="0" />
+                            <Button Grid.Column="2" Text="Сброс сети" Command="{Binding ResetNetworkCommand}"
+                                    Style="{StaticResource PbDangerButton}" FontSize="13" HeightRequest="40" Padding="0" />
                         </Grid>
+                        <Label Text="«Сброс сети» выключает системный прокси, убирает переменные окружения
+                               (для opencode/git) и чистит DNS-кэш. После сброса запустите opencode заново."
+                               Style="{StaticResource PbSubtitle}" FontSize="11" />
                     </VerticalStackLayout>
                 </Border>
 

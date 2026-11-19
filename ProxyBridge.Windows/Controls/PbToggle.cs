@@ -37,13 +37,12 @@ public sealed class PbToggle : ContentView
     {
         _knob = new Border
         {
-            WidthRequest = 24,
-            HeightRequest = 24,
+            WidthRequest = 22,
+            HeightRequest = 22,
             StrokeThickness = 0,
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 12 },
             HorizontalOptions = LayoutOptions.Start,
             VerticalOptions = LayoutOptions.Center,
-            Margin = new Thickness(3, 0, 0, 0),
+            Margin = new Thickness(4, 0, 0, 0),
         };
 
         _track = new Border
@@ -52,7 +51,6 @@ public sealed class PbToggle : ContentView
             HeightRequest = 30,
             StrokeThickness = 1,
             Stroke = new SolidColorBrush(Stroke),
-            StrokeShape = new Microsoft.Maui.Controls.Shapes.RoundRectangle { CornerRadius = 15 },
             Padding = 0,
             Content = new Grid { Children = { _knob } },
         };
@@ -76,7 +74,7 @@ public sealed class PbToggle : ContentView
         _track.BackgroundColor = on ? TrackOn : TrackOff;
         _knob.BackgroundColor = on ? KnobOn : KnobOff;
         _knob.HorizontalOptions = on ? LayoutOptions.End : LayoutOptions.Start;
-        _knob.Margin = on ? new Thickness(0, 0, 3, 0) : new Thickness(3, 0, 0, 0);
+        _knob.Margin = on ? new Thickness(0, 0, 4, 0) : new Thickness(4, 0, 0, 0);
 
         // Доступность: состояние озвучивается скринридером
         SemanticProperties.SetHint(this, on ? "включено" : "выключено");

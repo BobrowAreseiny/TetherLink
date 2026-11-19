@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="ProxyBridge.Android/ProxyBridge.Android.csproj" />
+  <Project Path="ProxyBridge.Core/ProxyBridge.Core.csproj" />
+  <Project Path="ProxyBridge.Windows/ProxyBridge.Windows.csproj" />
+</Solution>

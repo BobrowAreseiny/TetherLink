@@ -60,7 +60,7 @@
         <Setter Property="Stroke" Value="{StaticResource PbStroke}" />
         <Setter Property="StrokeThickness" Value="1" />
         <Setter Property="Padding" Value="16" />
-        <Setter Property="StrokeShape" Value="RoundRectangle 8" />
+        <Setter Property="StrokeShape" Value="Rectangle" />
     </Style>
 
     <Style x:Key="PbCardFlat" TargetType="Border">
@@ -68,7 +68,7 @@
         <Setter Property="Stroke" Value="{StaticResource PbStroke}" />
         <Setter Property="StrokeThickness" Value="1" />
         <Setter Property="Padding" Value="14" />
-        <Setter Property="StrokeShape" Value="RoundRectangle 8" />
+        <Setter Property="StrokeShape" Value="Rectangle" />
     </Style>
 
     <Style x:Key="PbChip" TargetType="Border">
@@ -76,21 +76,21 @@
         <Setter Property="Stroke" Value="{StaticResource PbStroke}" />
         <Setter Property="StrokeThickness" Value="1" />
         <Setter Property="Padding" Value="10,4" />
-        <Setter Property="StrokeShape" Value="RoundRectangle 6" />
+        <Setter Property="StrokeShape" Value="Rectangle" />
     </Style>
 
     <Style x:Key="PbDot" TargetType="Border">
         <Setter Property="WidthRequest" Value="10" />
         <Setter Property="HeightRequest" Value="10" />
         <Setter Property="StrokeThickness" Value="0" />
-        <Setter Property="StrokeShape" Value="RoundRectangle 5" />
+        <Setter Property="StrokeShape" Value="Rectangle" />
     </Style>
 
     <Style x:Key="PbSegment" TargetType="Border">
         <Setter Property="BackgroundColor" Value="Transparent" />
         <Setter Property="Stroke" Value="{StaticResource PbStroke}" />
         <Setter Property="StrokeThickness" Value="1" />
-        <Setter Property="StrokeShape" Value="RoundRectangle 6" />
+        <Setter Property="StrokeShape" Value="Rectangle" />
         <Setter Property="Padding" Value="12,10" />
         <Setter Property="HeightRequest" Value="46" />
         <Setter Property="VerticalOptions" Value="Center" />
@@ -138,7 +138,7 @@
         <Setter Property="TextColor" Value="{StaticResource PbAccentDark}" />
         <Setter Property="FontAttributes" Value="Bold" />
         <Setter Property="FontSize" Value="16" />
-        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="CornerRadius" Value="0" />
         <Setter Property="HeightRequest" Value="50" />
     </Style>
 
@@ -149,7 +149,7 @@
         <Setter Property="BorderWidth" Value="1" />
         <Setter Property="FontAttributes" Value="Bold" />
         <Setter Property="FontSize" Value="16" />
-        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="CornerRadius" Value="0" />
         <Setter Property="HeightRequest" Value="50" />
     </Style>
 
@@ -159,7 +159,7 @@
         <Setter Property="BorderColor" Value="{StaticResource PbStroke}" />
         <Setter Property="BorderWidth" Value="1" />
         <Setter Property="FontSize" Value="14" />
-        <Setter Property="CornerRadius" Value="8" />
+        <Setter Property="CornerRadius" Value="0" />
         <Setter Property="HeightRequest" Value="42" />
     </Style>
 
@@ -167,7 +167,7 @@
         <Setter Property="BackgroundColor" Value="{StaticResource PbSurfaceAlt}" />
         <Setter Property="Stroke" Value="{StaticResource PbStroke}" />
         <Setter Property="StrokeThickness" Value="1" />
-        <Setter Property="StrokeShape" Value="RoundRectangle 6" />
+        <Setter Property="StrokeShape" Value="Rectangle" />
         <Setter Property="Padding" Value="0" />
         <Setter Property="HeightRequest" Value="42" />
         <Setter Property="VerticalOptions" Value="Center" />

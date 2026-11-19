@@ -24,6 +24,8 @@ internal static class ProxySession
     private static int _ttlOwned;        // 1 = TTL=65 поставили мы и должны откатить
     private static int _envOwned;        // 1 = переменные окружения прокси поставили мы
     private static int _envSuspended;    // 1 = переменные временно сняты (телефон недоступен)
+    private static int _proxySuspended;  // 1 = системный прокси временно снят (телефон недоступен)
+    private static bool _systemProxyWanted; // пользователь просил ставить системный прокси
     private static int _cleanedUp;
     private static Timer? _watchdog;
     private static int _misses;
@@ -48,7 +50,7 @@ internal static class ProxySession
     {
         get
         {
-            lock (_sync) return string.Join("\n", _log.TakeLast(120));
+            lock (_sync) return string.Join("\n", _log.TakeLast(10));
         }
     }
 
@@ -189,6 +191,8 @@ internal static class ProxySession
         _port = port;
         _running = true;
         LinkLost = false;
+        _systemProxyWanted = setSystemProxy;
+        Interlocked.Exchange(ref _proxySuspended, 0);
         AppendLog($"Канал проверен: {lastMessage}");
 
         if (setSystemProxy)
@@ -228,14 +232,13 @@ internal static class ProxySession
                 ProxyEnvironment.Apply(host, port);
                 Interlocked.Exchange(ref _envOwned, 1);
                 AppendLog($"Переменные прокси заданы: HTTP_PROXY/HTTPS_PROXY = http://{host}:{port}");
-                AppendLog("Внимание: новые терминалы и opencode подхватят их сразу; уже открытые — после перезапуска");
 
-                // Если opencode уже запущен — прямо говорим, что надо перезапустить,
-                // иначе пользователь будет долго гадать, почему DeepSeek не отвечает.
-                if (System.Diagnostics.Process.GetProcessesByName("opencode").Length > 0)
-                {
-                    AppendLog("⚠ OpenCode сейчас запущен и НЕ увидит новые переменные — перезапустите его, чтобы DeepSeek пошёл через телефон");
-                }
+                // OpenCode читает переменные только при старте. Если он уже запущен,
+                // завершаем сессию — иначе запросы уйдут по старым настройкам.
+                if (OpencodeSession.TerminateIfRunning("включён прокси телефона"))
+                    AppendLog("Сессия OpenCode закрыта — при следующем запуске он пойдёт через телефон");
+                else if (OpencodeSession.IsRunning)
+                    AppendLog("OpenCode запущен и не закрыт (автозакрытие выключено) — перезапустите его вручную");
             }
             catch (Exception ex)
             {
@@ -279,6 +282,7 @@ internal static class ProxySession
                 _phoneHost = host;
                 _port = port;
                 _running = true;
+                _systemProxyWanted = true;
                 Interlocked.Exchange(ref _proxyOwned, 1);
                 StartWatchdog(port);
                 AppendLog($"Восстановлено: прокси {host}:{port} уже работает");
@@ -349,13 +353,14 @@ internal static class ProxySession
                 RaiseChanged();
             }
 
+            // Телефон снова в сети — возвращаем системный прокси и переменные,
+            // если снимали их из-за длительной потери связи.
+            ResumeAfterLink();
+
             return;
         }
 
         var misses = Interlocked.Increment(ref _misses);
-        if (misses < 2) return;
-
-        Interlocked.Exchange(ref _misses, 0);
 
         if (!LinkLost)
         {
@@ -364,55 +369,90 @@ internal static class ProxySession
             RaiseChanged();
         }
 
-        // 6 пропусков подряд (18 секунд) — телефон недоступен. Снимаем переменные
-        // окружения: они сейчас уводят opencode и прочие инструменты в пустоту.
-        if (misses >= 6)
-        {
-            SuspendEnvironmentProxy();
-        }
+        // Длительная потеря связи (~15 секунд) — скорее всего ноутбук ушёл
+        // в другую сеть. Снимаем системный прокси и переменные окружения,
+        // чтобы интернет в новой сети работал напрямую, а не висел в пустоте.
+        if (misses >= 5)
+            SuspendForLostLink();
 
-        if (AutoReconnect) _ = RecoverAsync(port);
+        if (misses >= 2 && AutoReconnect) _ = RecoverAsync(port);
     }
 
     /// <summary>
-    /// Временно снимает переменные прокси, пока телефон недоступен.
-    /// Системный прокси Windows при этом остаётся: браузеры покажут нормальную
-    /// страницу ошибки, а не зависнут.
+    /// Временно снимает системный прокси и переменные окружения, пока телефон
+    /// недоступен. Это критично, когда ноутбук переключился на другую сеть:
+    /// WinINET-прокси и HTTP_PROXY продолжают указывать на старый адрес телефона,
+    /// и интернет «пропадает» во всех приложениях. После восстановления связи
+    /// настройки возвращаются автоматически.
     /// </summary>
-    private static void SuspendEnvironmentProxy()
+    private static void SuspendForLostLink()
     {
-        if (Interlocked.Exchange(ref _envSuspended, 0) == 1) return;
+        if (Interlocked.CompareExchange(ref _proxySuspended, 1, 0) == 1) return;
 
         try
         {
-            ProxyEnvironment.Restore();
-            AppendLog("Переменные прокси сняты: телефон недоступен — opencode и git не будут стучаться в пустоту");
+            // 1. Переменные окружения — принудительно, но только если они указывают
+            //    на текущий адрес телефона (чужие прокси не трогаем).
+            var removed = ProxyEnvironment.ForceClear($"http://{_phoneHost}:{_port}");
+            Interlocked.Exchange(ref _envSuspended, 1);
+            if (removed > 0)
+                AppendLog($"Переменные прокси удалены ({removed} шт.): телефон недоступен — opencode и git не будут стучаться в пустоту");
+
+            // 2. Системный прокси Windows — только если включали его мы.
+            if (_systemProxyWanted)
+            {
+                var owned = Interlocked.Exchange(ref _proxyOwned, 0) == 1;
+                if (owned || WindowsProxy.IsOursActive())
+                {
+                    WindowsProxy.Disable();
+                    WindowsProxy.ClearOwned();
+                    AppendLog("Телефон вне сети — системный прокси Windows временно выключен, интернет идёт напрямую");
+                }
+            }
+
+            // OpenCode сейчас работал через мёртвый прокси — завершаем сессию,
+            // чтобы следующий запуск прочитал актуальные настройки.
+            OpencodeSession.TerminateIfRunning("телефон пропал из сети");
         }
         catch (Exception ex)
         {
-            AppendLog($"Не удалось снять переменные прокси: {ex.Message}");
+            AppendLog($"Не удалось временно снять прокси: {ex.Message}");
         }
-
-        Interlocked.Exchange(ref _envSuspended, 1);
     }
 
     /// <summary>
-    /// Возвращает переменные прокси с актуальным адресом телефона.
+    /// Возвращает системный прокси и переменные окружения после восстановления связи.
     /// </summary>
-    private static void ResumeEnvironmentProxy()
+    private static void ResumeAfterLink()
     {
-        if (Interlocked.Exchange(ref _envSuspended, 0) == 0) return;
+        if (Interlocked.Exchange(ref _proxySuspended, 0) == 0) return;
         if (string.IsNullOrWhiteSpace(_phoneHost) || _port <= 0) return;
 
         try
         {
-            ProxyEnvironment.Apply(_phoneHost, _port);
-            Interlocked.Exchange(ref _envOwned, 1);
-            AppendLog($"Переменные прокси возвращены: http://{_phoneHost}:{_port}");
+            if (_systemProxyWanted)
+            {
+                var server = ProxyFormat.BuildServerString(_phoneHost, _port);
+                WindowsProxy.Enable(server);
+                WindowsProxy.SaveOwned(server, null);
+                Interlocked.Exchange(ref _proxyOwned, 1);
+                AppendLog($"Системный прокси Windows снова включён на {_phoneHost}:{_port}");
+            }
+
+            if (Interlocked.Exchange(ref _envSuspended, 0) == 1)
+            {
+                ProxyEnvironment.Apply(_phoneHost, _port);
+                Interlocked.Exchange(ref _envOwned, 1);
+                AppendLog($"Переменные прокси возвращены: http://{_phoneHost}:{_port}");
+            }
+
+            // Пока телефон был недоступен, OpenCode мог быть закрыт — следующий
+            // запуск подхватит актуальные настройки. Если остался жив — закрываем.
+            OpencodeSession.TerminateIfRunning("связь с телефоном вернулась");
         }
         catch (Exception ex)
         {
-            AppendLog($"Не удалось вернуть переменные прокси: {ex.Message}");
+            AppendLog($"Не удалось вернуть прокси: {ex.Message}");
         }
     }
 
@@ -496,7 +536,7 @@ internal static class ProxySession
     private static void LinkLostAfterRecovery()
     {
         LinkLost = false;
-        ResumeEnvironmentProxy();
+        ResumeAfterLink();
         AppendLog("Соединение восстановлено");
         RaiseChanged();
     }
@@ -514,6 +554,9 @@ internal static class ProxySession
             Interlocked.Exchange(ref _envOwned, 1);
             Interlocked.Exchange(ref _envSuspended, 0);
             AppendLog($"Переменные прокси обновлены: http://{host}:{port}");
+
+            // Адрес телефона сменился — OpenCode обязан перечитать переменные.
+            OpencodeSession.TerminateIfRunning($"адрес телефона сменился на {host}");
         }
         catch (Exception ex)
         {
@@ -544,6 +587,9 @@ internal static class ProxySession
         _phoneHost = string.Empty;
         _port = 0;
         LinkLost = false;
+        _systemProxyWanted = false;
+        Interlocked.Exchange(ref _proxySuspended, 0);
+        Interlocked.Exchange(ref _envSuspended, 0);
         StopWatchdog();
 
         ReleaseSystemProxy();
@@ -553,6 +599,117 @@ internal static class ProxySession
         AppendLog("Отключено: настройки Windows восстановлены");
         RaiseChanged();
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// «Красная кнопка» — полный сброс сети к стандартному состоянию. Для случаев,
+    /// когда после раздачи интернета «всё сломалось» и непонятно, что крутить:
+    ///
+    ///   • выключает системный прокси WinINET (даже если включал не мы, но адрес наш/локальный);
+    ///   • убирает PAC-автонастройку, если её ставили мы;
+    ///   • принудительно стирает переменные HTTP_PROXY/HTTPS_PROXY из HKCU\Environment —
+    ///     в том числе оставшиеся от прошлой сессии (после taskkill или перезагрузки);
+    ///   • сбрасывает содержимое DNS-кэша (ipconfig /flushdns) — иначе браузеры ещё
+    ///     долго ходят по старым адресам;
+    ///   • останавливает сессию и watchdog, если они работали.
+    ///
+    /// Ничего чужого не трогает: переменные/прокси удаляются только с нашими значениями.
+    /// Возвращает человекочитаемый отчёт о том, что именно было сброшено.
+    /// </summary>
+    public static string ResetNetworkToDefaults()
+    {
+        var actions = new List<string>();
+
+        // 1. Останавливаем активную сессию (если была).
+        var wasRunning = _running;
+        _running = false;
+        _phoneHost = string.Empty;
+        _port = 0;
+        LinkLost = false;
+        _systemProxyWanted = false;
+        Interlocked.Exchange(ref _proxySuspended, 0);
+        Interlocked.Exchange(ref _envSuspended, 0);
+        StopWatchdog();
+
+        // 2. Системный прокси WinINET.
+        try
+        {
+            if (WindowsProxy.IsEnabled || WindowsProxy.PacEnabled)
+            {
+                WindowsProxy.Disable();
+                WindowsProxy.ClearOwned();
+                actions.Add("системный прокси Windows выключен");
+            }
+        }
+        catch (Exception ex)
+        {
+            actions.Add($"системный прокси: не удалось ({ex.Message})");
+        }
+
+        // 3. Переменные окружения — принудительно, независимо от того, кто их ставил в этом запуске.
+        try
+        {
+            var removed = ProxyEnvironment.ForceClear();
+            Interlocked.Exchange(ref _envOwned, 0);
+            Interlocked.Exchange(ref _envSuspended, 0);
+            if (removed > 0)
+            {
+                actions.Add($"переменные прокси удалены ({removed} шт.)");
+
+                // OpenCode стучался в мёртвый прокси — завершаем сессию,
+                // следующий запуск прочитает чистое окружение.
+                if (OpencodeSession.TerminateIfRunning("сброс сети"))
+                    actions.Add("сессия OpenCode закрыта");
+            }
+        }
+        catch (Exception ex)
+        {
+            actions.Add($"переменные прокси: не удалось ({ex.Message})");
+        }
+
+        // 4. TTL обратно в 128, если меняли мы.
+        if (Interlocked.Exchange(ref _ttlOwned, 0) == 1)
+        {
+            try
+            {
+                if (WindowsTtlProtector.RestoreDefaultTtl())
+                    actions.Add("TTL восстановлен (128)");
+            }
+            catch
+            {
+                // не критично
+            }
+        }
+
+        // 5. DNS-кэш: старые записи могут указывать на телефон-шлюз.
+        try
+        {
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "ipconfig",
+                Arguments = "/flushdns",
+                UseShellExecute = false,
+                CreateNoWindow = true,
+            };
+            using var proc = System.Diagnostics.Process.Start(psi);
+            proc?.WaitForExit(5000);
+            actions.Add("DNS-кэш очищен");
+        }
+        catch
+        {
+            // flushdns не критичен
+        }
+
+        if (wasRunning) actions.Insert(0, "сессия остановлена");
+
+        var report = actions.Count > 0
+            ? string.Join("; ", actions)
+            : "нечего сбрасывать — сеть уже в стандартном состоянии";
+
+        AppendLog($"Сброс сети: {report}");
+        RaiseChanged();
+
+        return report;
     }
 
     /// <summary>
@@ -566,6 +723,9 @@ internal static class ProxySession
         _phoneHost = string.Empty;
         _port = 0;
         LinkLost = false;
+        _systemProxyWanted = false;
+        Interlocked.Exchange(ref _proxySuspended, 0);
+        Interlocked.Exchange(ref _envSuspended, 0);
         StopWatchdog();
 
         ReleaseSystemProxy();
@@ -601,6 +761,10 @@ internal static class ProxySession
         {
             ProxyEnvironment.Restore();
             AppendLog("Переменные HTTP_PROXY/HTTPS_PROXY восстановлены");
+
+            // OpenCode работал через прокси телефона — теперь телефон не в канале,
+            // завершаем сессию, чтобы следующий запуск пошёл напрямую (VPN/домашняя сеть).
+            OpencodeSession.TerminateIfRunning("прокси выключен");
         }
         catch (Exception ex)
         {

@@ -61,7 +61,7 @@ public sealed class ProxyForegroundService : Service
     /// <summary>Журнал событий (последние записи).</summary>
     public static string LogText
     {
-        get { lock (_logSync) return string.Join("\n", _log.TakeLast(80)); }
+        get { lock (_logSync) return string.Join("\n", _log.TakeLast(10)); }
     }
 
     /// <summary>Остановить сервис снаружи (например, из Activity.OnDestroy).</summary>

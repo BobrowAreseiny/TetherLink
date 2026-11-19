@@ -15,21 +15,6 @@
 
 ## Архитектура
 
-```
-┌─────────────────────┐         Wi-Fi (точка доступа)        ┌──────────────────┐
-│   Android-телефон   │ ◄──────────────────────────────────► │   Windows-ноутбук │
-│                     │                                      │                  │
-│  ProxyForeground    │   SOCKS5/HTTP на порту 9000          │  ProxySession    │
-│  Service            │ ◄──────────────────────────────────► │                  │
-│                     │                                      │  ├─ GatewayProbe │
-│  TcpListener        │                                      │  ├─ WindowsProxy │
-│  (0.0.0.0:9000)     │                                      │  └─ ProxyEnv     │
-│                     │                                      │                  │
-│  HotspotIpResolver  │                                      │  Системный прокси│
-│  WifiLock           │                                      │  + env vars      │
-└─────────────────────┘                                      └──────────────────┘
-```
-
 **Ядро** (`ProxyBridge.Core`): платформенно-независимый код — TcpListener, HTTP/SOCKS5 хендлеры, PAC-сервер, счётчики трафика.
 
 **Android** (`ProxyBridge.Android`): foreground-сервис с wake lock, определение IP точки доступа, UI на .NET MAUI.

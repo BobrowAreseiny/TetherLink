@@ -36,6 +36,9 @@ public partial class ProxyViewModel : ObservableObject
     private bool _setEnvironmentProxy = true;
 
     [ObservableProperty]
+    private bool _closeOpencodeSession = true;
+
+    [ObservableProperty]
     private bool _autoReconnect = true;
 
     [ObservableProperty]
@@ -79,6 +82,7 @@ public partial class ProxyViewModel : ObservableObject
     public ProxyViewModel()
     {
         ProxySession.AutoReconnect = AutoReconnect;
+        OpencodeSession.Enabled = CloseOpencodeSession;
         ProxySession.HealStaleState();
         ProxySession.Changed += (_, _) => Refresh();
         Refresh();
@@ -110,6 +114,8 @@ public partial class ProxyViewModel : ObservableObject
     private int Port => int.TryParse(PortText, out var p) && p is > 0 and < 65536 ? p : 9000;
 
     partial void OnAutoReconnectChanged(bool value) => ProxySession.AutoReconnect = value;
+
+    partial void OnCloseOpencodeSessionChanged(bool value) => OpencodeSession.Enabled = value;
 
     partial void OnPortTextChanged(string value) => OnPropertyChanged(nameof(Endpoint));
 
@@ -281,6 +287,41 @@ public partial class ProxyViewModel : ObservableObject
     }
 
     /// <summary>
+    /// «Красная кнопка» — полный сброс сети к стандарту. Убирает всё, что могло
+    /// «поломать интернет» после раздачи: системный прокси, переменные окружения
+    /// (даже от прошлых сессий), PAC, TTL, DNS-кэш.
+    /// </summary>
+    [RelayCommand]
+    private async Task ResetNetworkAsync()
+    {
+        if (IsBusy) return;
+
+        IsBusy = true;
+        PowerText = "Сброс";
+        PowerSubText = "возвращаю стандартные настройки…";
+        DetailText = "Сбрасываю сетевые настройки к стандартным…";
+        Refresh();
+
+        try
+        {
+            var report = await Task.Run(ProxySession.ResetNetworkToDefaults);
+
+            RememberAction(true, "Сеть сброшена к стандарту. Перезапустите opencode и терминалы, если они были открыты.");
+            DetailText = $"Сброс выполнен: {report}. Перезапустите opencode, если он был открыт.";
+        }
+        catch (Exception ex)
+        {
+            RememberAction(false, $"Сброс не удался: {ex.Message}");
+            DetailText = _lastActionMessage ?? "Сброс не удался";
+        }
+        finally
+        {
+            IsBusy = false;
+            Refresh();
+        }
+    }
+
+    /// <summary>
     /// Открывает список сетей Wi-Fi: чаще всего ноутбук просто ушёл на домашнюю
     /// сеть, и нужно переключиться обратно на точку доступа телефона.
     /// </summary>
@@ -295,22 +336,6 @@ public partial class ProxyViewModel : ObservableObject
         catch (Exception ex)
         {
             DetailText = $"Не удалось открыть настройки Wi-Fi: {ex.Message}";
-        }
-    }
-
-    /// <summary>Строка для установки на другой ноутбук: путь к exe и папка целиком.</summary>
-    [RelayCommand]
-    private async Task CopyInstallAsync()
-    {
-        try
-        {
-            var installHint = "artifacts\\win-release-new\\ProxyBridge.Windows.exe  (скопируйте папку целиком)";
-            await Clipboard.SetTextAsync(installHint);
-            DetailText = "Путь установки скопирован";
-        }
-        catch (Exception ex)
-        {
-            DetailText = $"Не удалось скопировать: {ex.Message}";
         }
     }
 

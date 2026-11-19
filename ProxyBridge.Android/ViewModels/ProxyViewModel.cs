@@ -34,10 +34,16 @@ public partial class ProxyViewModel : ObservableObject
     private string _portText = "9000";
 
     [ObservableProperty]
-    private string _trafficUp = "0 Б";
+    private string _trafficUp = "↑ 0 Б";
 
     [ObservableProperty]
-    private string _trafficDown = "0 Б";
+    private string _trafficDown = "↓ 0 Б";
+
+    [ObservableProperty]
+    private string _speedUp = "↑ 0 Б/с";
+
+    [ObservableProperty]
+    private string _speedDown = "↓ 0 Б/с";
 
     [ObservableProperty]
     private string _activeConnections = "0";
@@ -69,6 +75,11 @@ public partial class ProxyViewModel : ObservableObject
     private string? _lastMessage;
     private bool _lastFailed;
     private DateTime _lastAt = DateTime.MinValue;
+
+    // Для расчёта скорости: разница байт между тиками таймера.
+    private DateTime _lastStatsAt = DateTime.MinValue;
+    private long _lastStatsUp;
+    private long _lastStatsDown;
 
     private void Remember(bool ok, string message)
     {
@@ -241,22 +252,6 @@ public partial class ProxyViewModel : ObservableObject
         }
     }
 
-    /// <summary>Строка для установки на ноутбук: путь к exe и папка целиком.</summary>
-    [RelayCommand]
-    private async Task CopyInstallAsync()
-    {
-        try
-        {
-            var installHint = "artifacts\\win-release-new\\ProxyBridge.Windows.exe  (скопируйте папку целиком)";
-            await Clipboard.SetTextAsync(installHint);
-            DetailText = "Путь установки скопирован";
-        }
-        catch (Exception ex)
-        {
-            DetailText = $"Не удалось скопировать: {ex.Message}";
-        }
-    }
-
     /// <summary>Раз в секунду обновляем показания: счётчики трафика растут во время работы.</summary>
     public void StartUiTimer()
     {
@@ -314,8 +309,31 @@ public partial class ProxyViewModel : ObservableObject
             }
 
             var stats = ProxyForegroundService.Stats;
-            TrafficUp = FormatBytes(stats.BytesUp);
-            TrafficDown = FormatBytes(stats.BytesDown);
+            var now = DateTime.UtcNow;
+
+            if (IsRunning && _lastStatsAt != DateTime.MinValue)
+            {
+                var elapsed = (now - _lastStatsAt).TotalSeconds;
+                if (elapsed > 0.2)
+                {
+                    var deltaDown = Math.Max(0, stats.BytesDown - _lastStatsDown);
+                    var deltaUp = Math.Max(0, stats.BytesUp - _lastStatsUp);
+                    SpeedDown = $"↓ {FormatBytes((long)(deltaDown / elapsed))}/с";
+                    SpeedUp = $"↑ {FormatBytes((long)(deltaUp / elapsed))}/с";
+                }
+            }
+            else if (!IsRunning)
+            {
+                SpeedDown = "↓ 0 Б/с";
+                SpeedUp = "↑ 0 Б/с";
+            }
+
+            _lastStatsAt = now;
+            _lastStatsUp = stats.BytesUp;
+            _lastStatsDown = stats.BytesDown;
+
+            TrafficUp = $"↑ {FormatBytes(stats.BytesUp)}";
+            TrafficDown = $"↓ {FormatBytes(stats.BytesDown)}";
             ActiveConnections = $"{stats.ActiveConnections} / {stats.TotalConnections}";
 
             LogText = ProxyForegroundService.LogText;

@@ -5,4 +5,22 @@
     xmlns:maui="using:Microsoft.Maui"
     xmlns:local="using:ProxyBridge.Windows.WinUI">
 
+    <!-- Поля ввода рисует наш Border, поэтому у WinUI TextBox убираем фон,
+         рамку и скругление на уровне ресурсов приложения. -->
+    <maui:MauiWinUIApplication.Resources>
+        <ResourceDictionary>
+            <SolidColorBrush x:Key="TextControlBackground" Color="Transparent" />
+            <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="Transparent" />
+            <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="Transparent" />
+            <SolidColorBrush x:Key="TextControlBackgroundDisabled" Color="Transparent" />
+            <SolidColorBrush x:Key="TextControlBorderBrush" Color="Transparent" />
+            <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="Transparent" />
+            <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="Transparent" />
+            <SolidColorBrush x:Key="TextControlBorderBrushDisabled" Color="Transparent" />
+            <Thickness x:Key="TextControlBorderThemeThickness">0</Thickness>
+            <Thickness x:Key="TextControlBorderThemeThicknessFocused">0</Thickness>
+            <CornerRadius x:Key="ControlCornerRadius">0</CornerRadius>
+        </ResourceDictionary>
+    </maui:MauiWinUIApplication.Resources>
+
 </maui:MauiWinUIApplication>

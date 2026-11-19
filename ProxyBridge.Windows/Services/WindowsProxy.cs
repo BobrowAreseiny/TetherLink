@@ -15,6 +15,26 @@ internal static class WindowsProxy
     private const int InternetOptionRefresh = 37;
     private const int InternetOptionSettingsChanged = 39;
 
+    /// <summary>Включён ли системный прокси WinINET прямо сейчас.</summary>
+    public static bool IsEnabled
+    {
+        get
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(KeyPath);
+            return key?.GetValue("ProxyEnable") is int v && v == 1;
+        }
+    }
+
+    /// <summary>Задан ли PAC-файл (режим автонастройки).</summary>
+    public static bool PacEnabled
+    {
+        get
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(KeyPath);
+            return !string.IsNullOrWhiteSpace(key?.GetValue("AutoConfigURL") as string);
+        }
+    }
+
     /// <summary>Порт системного прокси (0, если не настроен или это PAC).</summary>
     public static int ServerPort
     {

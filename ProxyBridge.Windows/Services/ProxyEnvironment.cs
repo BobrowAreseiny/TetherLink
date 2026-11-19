@@ -21,6 +21,8 @@ namespace ProxyBridge.Windows.Services;
 internal static class ProxyEnvironment
 {
     private const string EnvironmentKeyPath = @"Environment";
+    private const string OwnKeyPath = @"Software\ProxyBridge";
+    private const string OwnedEnvValue = "OwnedEnv";
 
     // Порядок важен: сначала нижний регистр (его читает Bun/opencode), потом верхний.
     private static readonly string[] ProxyVariables =
@@ -39,23 +41,23 @@ internal static class ProxyEnvironment
     private static readonly Dictionary<string, string?> _previous = [];
     private static int _applied;
 
-    /// <summary>Какие переменные сейчас выставлены нами (для интерфейса и журнала).</summary>
-    public static bool IsApplied => Interlocked.Exchange(ref _applied, 0) == 1;
-
     /// <summary>
     /// Убирает переменные прокси, оставшиеся от ПРЕДЫДУЩЕГО запуска (например, после
     /// жёсткого taskkill /F — тогда Restore не успел отработать).
     ///
-    /// Без этого opencode и git продолжают стучаться в адрес телефона, которого
-    /// в сети уже нет, и «не подключаются» без всяких видимых причин.
+    /// Без этого opencode и git продолжают стучаться в старый IP телефона, которого
+    /// в сети уже нет, и «не подключаются» без видимых причин.
     ///
-    /// Удаляем только те переменные, которые сами выставляем (значение вида
-    /// http://host:port), и только если они ещё указывают на тот же адрес.
+    /// Точный адрес, который мы выставляли, хранится в HKCU\Software\ProxyBridge\OwnedEnv,
+    /// поэтому удаляем только свои значения — даже если порт не 9000. Чужие прокси
+    /// (корпоративный, VPN) не затрагиваются.
     /// </summary>
     public static bool ClearOrphanedVariables()
     {
         try
         {
+            var owned = ReadOwnedEnv();
+
             using var key = Registry.CurrentUser.OpenSubKey(EnvironmentKeyPath, writable: true);
             if (key is null) return false;
 
@@ -66,17 +68,32 @@ internal static class ProxyEnvironment
                 var value = key.GetValue(name) as string;
                 if (string.IsNullOrWhiteSpace(value)) continue;
 
-                // Только наши значения: http://host:port
-                if (!value.StartsWith("http://", StringComparison.OrdinalIgnoreCase)) continue;
-                if (!value.EndsWith(":9000", StringComparison.OrdinalIgnoreCase) &&
-                    !value.Contains(":9000/", StringComparison.OrdinalIgnoreCase)) continue;
+                bool isOurs;
+                if (name is "no_proxy" or "NO_PROXY")
+                {
+                    isOurs = value == "localhost,127.0.0.1,::1";
+                }
+                else if (owned is not null)
+                {
+                    // Точное совпадение с адресом из прошлой сессии.
+                    isOurs = string.Equals(value, owned, StringComparison.OrdinalIgnoreCase);
+                }
+                else
+                {
+                    // Совместимость со старой версией: раньше порт был только 9000.
+                    isOurs = value.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+                             (value.EndsWith(":9000", StringComparison.OrdinalIgnoreCase) ||
+                              value.Contains(":9000/", StringComparison.OrdinalIgnoreCase));
+                }
 
-                // no_proxy мы не трогаем — это настройка исключений, а не адрес.
-                if (name is "no_proxy" or "NO_PROXY") continue;
+                if (!isOurs) continue;
 
                 key.DeleteValue(name, throwOnMissingValue: false);
                 removed = true;
             }
+
+            // Запись об адресе больше не нужна — переменные сняты.
+            if (owned is not null) SaveOwnedEnv(null);
 
             if (removed)
             {
@@ -90,6 +107,37 @@ internal static class ProxyEnvironment
         }
 
         return false;
+    }
+
+    private static string? ReadOwnedEnv()
+    {
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(OwnKeyPath);
+            return key?.GetValue(OwnedEnvValue) as string;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static void SaveOwnedEnv(string? proxyUrl)
+    {
+        try
+        {
+            using var key = Registry.CurrentUser.CreateSubKey(OwnKeyPath);
+            if (key is null) return;
+
+            if (string.IsNullOrWhiteSpace(proxyUrl))
+                key.DeleteValue(OwnedEnvValue, throwOnMissingValue: false);
+            else
+                key.SetValue(OwnedEnvValue, proxyUrl, RegistryValueKind.String);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ProxyBridge] SaveOwnedEnv: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -117,6 +165,10 @@ internal static class ProxyEnvironment
 
         Interlocked.Exchange(ref _applied, 1);
 
+        // Запоминаем точный адрес, чтобы после аварийного завершения убрать
+        // из окружения именно его, а не любой чужой прокси.
+        SaveOwnedEnv(proxy);
+
         BroadcastEnvironmentChange();
     }
 
@@ -141,6 +193,7 @@ internal static class ProxyEnvironment
             }
 
             _previous.Clear();
+            SaveOwnedEnv(null);
             BroadcastEnvironmentChange();
         }
         catch (Exception ex)
@@ -150,12 +203,68 @@ internal static class ProxyEnvironment
     }
 
     /// <summary>
-    /// Читает текущее значение переменной пользователя (для показа в журнале).
+    /// ПРИНУДИТЕЛЬНАЯ очистка переменных прокси из HKCU\Environment — независимо от
+    /// того, ставили ли мы их в этом запуске. Это «красная кнопка» для кнопки сброса:
+    /// работает даже если приложение было перезапущено, убито или переменные
+    /// остались от прошлой сессии с телефоном.
+    ///
+    /// expectedProxy != null — удаляем только это точное значение (наш текущий адрес),
+    /// чтобы не стереть чужой корпоративный прокси. null — удаляем любые значения
+    /// вида http://host:port (режим полного сброса).
+    ///
+    /// Возвращает число удалённых переменных.
     /// </summary>
-    public static string? ReadUserVariable(string name)
+    public static int ForceClear(string? expectedProxy = null)
     {
-        using var key = Registry.CurrentUser.OpenSubKey(EnvironmentKeyPath);
-        return key?.GetValue(name) as string;
+        var removed = 0;
+
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(EnvironmentKeyPath, writable: true);
+            if (key is null) return 0;
+
+            foreach (var name in ProxyVariables)
+            {
+                // no_proxy — это список исключений, а не адрес: убираем тоже,
+                // но только если он совпадает с нашим шаблоном.
+                var value = key.GetValue(name) as string;
+                if (string.IsNullOrWhiteSpace(value)) continue;
+
+                bool isOurs;
+                if (name is "no_proxy" or "NO_PROXY")
+                {
+                    isOurs = value == "localhost,127.0.0.1,::1";
+                }
+                else if (expectedProxy is not null)
+                {
+                    isOurs = string.Equals(value, expectedProxy, StringComparison.OrdinalIgnoreCase);
+                }
+                else
+                {
+                    isOurs = value.StartsWith("http://", StringComparison.OrdinalIgnoreCase);
+                }
+
+                if (!isOurs) continue;
+
+                key.DeleteValue(name, throwOnMissingValue: false);
+                Interlocked.Exchange(ref _applied, 0);
+                removed++;
+            }
+
+            _previous.Clear();
+
+            if (removed > 0)
+            {
+                SaveOwnedEnv(null);
+                BroadcastEnvironmentChange();
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ProxyBridge] ForceClear: {ex.Message}");
+        }
+
+        return removed;
     }
 
     /// <summary>
